@@ -1,8 +1,13 @@
+import com.sun.jmx.mbeanserver.Util.cast
+import org.apache.kafka.common.serialization.{IntegerDeserializer, LongDeserializer}
 import org.apache.spark.sql
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.Row.empty.schema
+import org.apache.spark.sql.catalyst.StructFilters
 import org.apache.spark.sql.catalyst.dsl.expressions.{DslExpression, StringToAttributeConversionHelper}
+import org.apache.spark.sql.functions.avg
 import org.apache.spark.sql.streaming.Trigger.ProcessingTime
-import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.{DataFrame, SparkSession, types}
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 import scala.concurrent.duration.DurationInt
 
@@ -19,22 +24,20 @@ object SparkApp extends App {
   val brokers = "localhost:9092"
   val topic = "records"
 
+  object KafkaLongDeserializer extends LongDeserializer
+  object KafkaIntegerDeserializer extends IntegerDeserializer
+
+  spark.udf.register("deserLong", (bytes: Array[Byte]) => KafkaLongDeserializer.deserialize(topic, bytes))
+  spark.udf.register("deserInt", (bytes: Array[Byte]) => KafkaIntegerDeserializer.deserialize(topic, bytes))
+
+
   val records: DataFrame = spark.readStream
     .format("kafka")
     .option("kafka.bootstrap.servers", brokers)
     .option("subscribe", topic)
     .load()
-    .withColumn("key", records("key").cast(IntegerType))
-    .withColumn("value", records("value").cast(IntegerType))
-    //.select(records("key").cast(IntegerType).as("key"), records("value").cast(IntegerType).as("value"))
-    .select("key", "value")
-
- /* val records1 = records
-    .withColumn("Key", toInt(records("key")))
-    .withColumn("Value", toInt(records("value")))
-    .select("Key", "Value")
-*/
-  records.printSchema()
+    .selectExpr( "deserLong(key) AS key_long", "deserInt(value) AS value_int")
+    .agg(avg("value_int"))
 
   val query = records.writeStream
     .outputMode("update")
