@@ -1,13 +1,7 @@
-import com.sun.jmx.mbeanserver.Util.cast
 import org.apache.kafka.common.serialization.{IntegerDeserializer, LongDeserializer}
-import org.apache.spark.sql
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.Row.empty.schema
-import org.apache.spark.sql.catalyst.StructFilters
-import org.apache.spark.sql.catalyst.dsl.expressions.{DslExpression, StringToAttributeConversionHelper}
 import org.apache.spark.sql.functions.avg
 import org.apache.spark.sql.streaming.Trigger.ProcessingTime
-import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.concurrent.duration.DurationInt
 
